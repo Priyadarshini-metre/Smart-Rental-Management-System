@@ -156,9 +156,9 @@ The frontend communicates with the backend using REST APIs for:
 
 **Priyadarshini Nagashetty Metre**
 
-GitHub: Priyadarshini(https://github.com/Priyadarshini-metre)
+GitHub: https://github.com/Priyadarshini-metre
 
-LinkedIn: Priyadarshini(https://www.linkedin.com/in/priyadarshini-metre-1b354b2a7?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BjT2XeF22SLWV20IhckHkSA%3D%3D)
+LinkedIn: https://www.linkedin.com/in/priyadarshini-metre-1b354b2a7?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BjT2XeF22SLWV20IhckHkSA%3D%3D
 
 ## 📜 License
 

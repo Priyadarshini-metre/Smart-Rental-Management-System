@@ -43,6 +43,7 @@ public class AuthController {
         System.out.println("Username: " + loginRequest.getUsername());
         
         try {
+            System.out.println("Attempting authentication...");
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
@@ -51,6 +52,7 @@ public class AuthController {
             String username = loginRequest.getUsername();
             System.out.println("Authentication successful for: " + username);
             
+            System.out.println("Generating JWT token...");
             String jwt = jwtUtils.generateJwtToken(username);
             System.out.println("JWT token generated successfully");
 
@@ -70,7 +72,24 @@ public class AuthController {
                     userDetails.getEmail()
             );
 
+            System.out.println("Returning successful response");
             return ResponseEntity.ok(ApiResponse.success("Authentication successful", authResponse));
+        } catch (BadCredentialsException e) {
+            System.out.println("=== Bad Credentials ===");
+            System.out.println("Message: " + e.getMessage());
+            throw e;
+        } catch (DisabledException e) {
+            System.out.println("=== Account Disabled ===");
+            System.out.println("Message: " + e.getMessage());
+            throw e;
+        } catch (LockedException e) {
+            System.out.println("=== Account Locked ===");
+            System.out.println("Message: " + e.getMessage());
+            throw e;
+        } catch (UsernameNotFoundException e) {
+            System.out.println("=== User Not Found ===");
+            System.out.println("Message: " + e.getMessage());
+            throw e;
         } catch (Exception e) {
             System.out.println("=== Login Exception ===");
             System.out.println("Exception Type: " + e.getClass().getName());

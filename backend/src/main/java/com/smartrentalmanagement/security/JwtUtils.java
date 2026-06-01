@@ -21,7 +21,14 @@ public class JwtUtils {
     private long jwtExpirationMs;
 
     private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        // Try to decode as BASE64 first, if that fails use the raw string
+        try {
+            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        } catch (IllegalArgumentException e) {
+            // If BASE64 decoding fails, use the raw string bytes
+            logger.warn("JWT_SECRET is not valid BASE64, using raw string");
+            return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        }
     }
 
     public String generateJwtToken(String username) {

@@ -77,6 +77,7 @@ public class GlobalExceptionHandler {
         System.out.println("=== Global Exception Handler ===");
         System.out.println("Exception Type: " + ex.getClass().getName());
         System.out.println("Exception Message: " + ex.getMessage());
+        System.out.println("=== Stack Trace ===");
         ex.printStackTrace();
         
         return ResponseEntity

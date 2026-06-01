@@ -11,6 +11,8 @@ import com.smartrentalmanagement.repository.UserRepository;
 import com.smartrentalmanagement.security.JwtUtils;
 import com.smartrentalmanagement.security.UserDetailsImpl;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +22,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -39,22 +47,22 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        System.out.println("=== Login Request Received ===");
-        System.out.println("Username: " + loginRequest.getUsername());
+        logger.info("=== Login Request Received ===");
+        logger.info("Username: {}", loginRequest.getUsername());
         
         try {
-            System.out.println("Attempting authentication...");
+            logger.info("Attempting authentication...");
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
             String username = loginRequest.getUsername();
-            System.out.println("Authentication successful for: " + username);
+            logger.info("Authentication successful for: {}", username);
             
-            System.out.println("Generating JWT token...");
+            logger.info("Generating JWT token...");
             String jwt = jwtUtils.generateJwtToken(username);
-            System.out.println("JWT token generated successfully");
+            logger.info("JWT token generated successfully");
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             String role = userDetails.getAuthorities().stream()
@@ -62,7 +70,7 @@ public class AuthController {
                     .map(item -> item.getAuthority().replace("ROLE_", ""))
                     .orElse("USER");
 
-            System.out.println("Login successful for user: " + userDetails.getUsername() + " with role: " + role);
+            logger.info("Login successful for user: {} with role: {}", userDetails.getUsername(), role);
 
             AuthResponse authResponse = new AuthResponse(
                     jwt,
@@ -72,49 +80,49 @@ public class AuthController {
                     userDetails.getEmail()
             );
 
-            System.out.println("Returning successful response");
+            logger.info("Returning successful response");
             return ResponseEntity.ok(ApiResponse.success("Authentication successful", authResponse));
         } catch (BadCredentialsException e) {
-            System.out.println("=== Bad Credentials ===");
-            System.out.println("Message: " + e.getMessage());
+            logger.warn("=== Bad Credentials ===");
+            logger.warn("Message: {}", e.getMessage());
             throw e;
         } catch (DisabledException e) {
-            System.out.println("=== Account Disabled ===");
-            System.out.println("Message: " + e.getMessage());
+            logger.warn("=== Account Disabled ===");
+            logger.warn("Message: {}", e.getMessage());
             throw e;
         } catch (LockedException e) {
-            System.out.println("=== Account Locked ===");
-            System.out.println("Message: " + e.getMessage());
+            logger.warn("=== Account Locked ===");
+            logger.warn("Message: {}", e.getMessage());
             throw e;
         } catch (UsernameNotFoundException e) {
-            System.out.println("=== User Not Found ===");
-            System.out.println("Message: " + e.getMessage());
+            logger.warn("=== User Not Found ===");
+            logger.warn("Message: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            System.out.println("=== Login Exception ===");
-            System.out.println("Exception Type: " + e.getClass().getName());
-            System.out.println("Exception Message: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("=== Login Exception ===");
+            logger.error("Exception Type: {}", e.getClass().getName());
+            logger.error("Exception Message: {}", e.getMessage());
+            logger.error("Stack trace:", e);
             throw e;
         }
     }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
-        System.out.println("=== Registration Request Received ===");
-        System.out.println("Username: " + signUpRequest.getUsername());
-        System.out.println("Email: " + signUpRequest.getEmail());
-        System.out.println("Full Name: " + signUpRequest.getFullName());
-        System.out.println("Role: " + signUpRequest.getRole());
+        logger.info("=== Registration Request Received ===");
+        logger.info("Username: {}", signUpRequest.getUsername());
+        logger.info("Email: {}", signUpRequest.getEmail());
+        logger.info("Full Name: {}", signUpRequest.getFullName());
+        logger.info("Role: {}", signUpRequest.getRole());
 
         try {
             if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-                System.out.println("Username already exists: " + signUpRequest.getUsername());
+                logger.warn("Username already exists: {}", signUpRequest.getUsername());
                 throw new BadRequestException("Username is already taken!");
             }
 
             if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-                System.out.println("Email already exists: " + signUpRequest.getEmail());
+                logger.warn("Email already exists: {}", signUpRequest.getEmail());
                 throw new BadRequestException("Email is already in use!");
             }
 
@@ -124,7 +132,7 @@ public class AuthController {
                 try {
                     userRole = Role.valueOf(signUpRequest.getRole().toUpperCase());
                 } catch (IllegalArgumentException e) {
-                    System.out.println("Invalid role provided: " + signUpRequest.getRole());
+                    logger.warn("Invalid role provided: {}", signUpRequest.getRole());
                     throw new BadRequestException("Invalid role provided. Choose ADMIN or USER.");
                 }
             }
@@ -137,21 +145,21 @@ public class AuthController {
                     .role(userRole)
                     .build();
 
-            System.out.println("Saving user to database...");
+            logger.info("Saving user to database...");
             userRepository.save(user);
-            System.out.println("User saved successfully with ID: " + user.getId());
+            logger.info("User saved successfully with ID: {}", user.getId());
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("User registered successfully!", null));
         } catch (BadRequestException e) {
-            System.out.println("=== Registration BadRequestException ===");
-            System.out.println("Message: " + e.getMessage());
+            logger.warn("=== Registration BadRequestException ===");
+            logger.warn("Message: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            System.out.println("=== Registration Exception ===");
-            System.out.println("Exception Type: " + e.getClass().getName());
-            System.out.println("Exception Message: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("=== Registration Exception ===");
+            logger.error("Exception Type: {}", e.getClass().getName());
+            logger.error("Exception Message: {}", e.getMessage());
+            logger.error("Stack trace:", e);
             throw e;
         }
     }

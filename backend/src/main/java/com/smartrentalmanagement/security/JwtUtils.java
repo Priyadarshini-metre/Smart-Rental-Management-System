@@ -23,21 +23,35 @@ public class JwtUtils {
     private Key key() {
         // Try to decode as BASE64 first, if that fails use the raw string
         try {
-            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+            logger.info("Attempting to decode JWT_SECRET as BASE64...");
+            Key key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+            logger.info("JWT_SECRET decoded successfully as BASE64");
+            return key;
         } catch (IllegalArgumentException e) {
             // If BASE64 decoding fails, use the raw string bytes
-            logger.warn("JWT_SECRET is not valid BASE64, using raw string");
+            logger.warn("JWT_SECRET is not valid BASE64, using raw string. Error: {}", e.getMessage());
             return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        } catch (Exception e) {
+            logger.error("Failed to create JWT signing key. Exception: {}", e.getMessage(), e);
+            throw new RuntimeException("Invalid JWT secret configuration", e);
         }
     }
 
     public String generateJwtToken(String username) {
-        return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key(), SignatureAlgorithm.HS256)
-                .compact();
+        logger.info("Generating JWT token for user: {}", username);
+        try {
+            String token = Jwts.builder()
+                    .setSubject(username)
+                    .setIssuedAt(new Date())
+                    .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                    .signWith(key(), SignatureAlgorithm.HS256)
+                    .compact();
+            logger.info("JWT token generated successfully for user: {}", username);
+            return token;
+        } catch (Exception e) {
+            logger.error("Failed to generate JWT token for user: {}. Exception: {}", username, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate JWT token", e);
+        }
     }
 
     public String getUserNameFromJwtToken(String token) {

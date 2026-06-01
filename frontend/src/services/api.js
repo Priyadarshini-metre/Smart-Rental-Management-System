@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://smart-rental-management-system-1.onrender.com/api';
+const API_BASE_URL = 'https://smart-rental-management-system-0jp5.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
